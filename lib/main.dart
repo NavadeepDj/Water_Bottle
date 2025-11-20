@@ -27,13 +27,18 @@ void main() async {
   }
 
   try {
-    // Initialize Supabase
-    await Supabase.initialize(
-      url: SupabaseConfig.url,
-      anonKey: SupabaseConfig.anonKey,
-      debug: SupabaseConfig.enableDebug,
-    );
-    print('Supabase initialized successfully');
+    // Initialize Supabase only if configured (prevents empty-host URI errors)
+    if (SupabaseConfig.isConfigured) {
+      await Supabase.initialize(
+        url: SupabaseConfig.url,
+        anonKey: SupabaseConfig.anonKey,
+        debug: SupabaseConfig.enableDebug,
+      );
+      print('Supabase initialized successfully');
+    } else {
+      // Avoid making requests with an empty host (which causes "No host specified in URI /rest/...")
+      print('Supabase not initialized: ${SupabaseConfig.missingConfigMessage}');
+    }
   } catch (e) {
     print('Error initializing Supabase: $e');
     // Continue with the app even if Supabase fails

@@ -76,6 +76,9 @@ config/*.local.*
 config/*.secrets.*
 *.config.json
 
+# Local Supabase config (development only)
+lib/config/supabase_local.dart
+
 # Package manager auth
 .npmrc
 .pnpmrc
