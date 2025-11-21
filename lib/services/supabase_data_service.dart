@@ -268,7 +268,34 @@ class SupabaseDataService {
   // Delete a water fetch post by ID
   Future<void> deleteWaterFetchPost(String postId) async {
     try {
-      await _client.from('water_fetch_posts').delete().eq('id', postId);
+      // Supabase `id` column is numeric (BIGSERIAL). Try to pass an int when
+      // possible so the query matches correctly. Fall back to the original
+      // string if parsing fails.
+      final int? idAsInt = int.tryParse(postId ?? '');
+      final dynamic idFilter = idAsInt ?? postId;
+
+      await _client.from('water_fetch_posts').delete().eq('id', idFilter);
+
+      // Verify deletion: try to select the row back. If it still exists, the
+      // delete likely failed due to RLS or permissions.
+      try {
+        // Use maybeSingle() which returns null when no rows match. This
+        // avoids PostgrestException when the result contains 0 rows and
+        // treats that as deletion success.
+        final check = await _client
+            .from('water_fetch_posts')
+            .select()
+            .eq('id', idFilter)
+            .maybeSingle();
+
+        if (check != null) {
+          // Row still exists after delete attempt
+          throw Exception('Delete failed or not permitted by RLS/policies');
+        }
+      } catch (verifyError) {
+        // Surface any unexpected verification errors
+        rethrow;
+      }
     } catch (e) {
       print('Error deleting post: $e');
       rethrow;

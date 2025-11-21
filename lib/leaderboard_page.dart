@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:water_bottle/services/app_events.dart';
+import 'dart:async';
 
 class LeaderboardPage extends StatefulWidget {
   const LeaderboardPage({super.key});
@@ -14,11 +16,18 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
   bool _isLoading = true;
   String? _error;
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  StreamSubscription<void>? _dataChangedSub;
 
   @override
   void initState() {
     super.initState();
     _loadLeaderboardData();
+
+    // Listen for app-level data change events and reload leaderboard when
+    // posts are created/updated/deleted elsewhere in the app.
+    _dataChangedSub = AppEvents.onDataChanged.listen((_) {
+      _loadLeaderboardData();
+    });
   }
 
   @override
@@ -26,6 +35,12 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
     super.didChangeDependencies();
     // Refresh data when page becomes visible
     _loadLeaderboardData();
+  }
+
+  @override
+  void dispose() {
+    _dataChangedSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadLeaderboardData() async {

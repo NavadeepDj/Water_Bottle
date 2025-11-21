@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS water_fetch_posts (
   message TEXT NOT NULL,
   fetch_type TEXT NOT NULL CHECK (fetch_type IN ('Single', 'Together')),
   partner_user_id TEXT,
-  points DECIMAL(3,1) NOT NULL CHECK (points >= 0),
+  -- Use NUMERIC with two decimal places so values like 0.25 are preserved
+  points NUMERIC(5,2) NOT NULL CHECK (points >= 0),
   verification_status TEXT NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending', 'verified', 'rejected')),
   verified_by TEXT[] DEFAULT '{}',
   rejected_by TEXT[] DEFAULT '{}',
@@ -57,6 +58,15 @@ CREATE POLICY "Users can insert own posts" ON water_fetch_posts
 CREATE POLICY "Users can update posts" ON water_fetch_posts
   FOR UPDATE USING (true);
 
+-- NOTE: By default there was no DELETE policy which prevents clients from
+-- deleting rows when Row Level Security (RLS) is enabled. For development
+-- convenience we add a permissive DELETE policy here. This will allow
+-- deletes from the client. Tighten this policy before releasing to
+-- production (for example, restrict deletes to post owners or perform
+-- deletes from a secure server using the service_role key).
+CREATE POLICY "Users can delete posts" ON water_fetch_posts
+  FOR DELETE USING (true);
+
 -- 6. Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_user_profiles_firebase_uid ON user_profiles(firebase_uid);
 CREATE INDEX IF NOT EXISTS idx_water_fetch_posts_firebase_uid ON water_fetch_posts(firebase_uid);
@@ -92,3 +102,8 @@ GRANT ALL ON user_profiles TO authenticated;
 GRANT ALL ON water_fetch_posts TO authenticated;
 GRANT USAGE ON SEQUENCE user_profiles_id_seq TO authenticated;
 GRANT USAGE ON SEQUENCE water_fetch_posts_id_seq TO authenticated;
+
+-- If you already have this table in your Supabase project, run this ALTER
+-- to change the column precision without losing data (run in Supabase SQL
+-- editor):
+-- ALTER TABLE water_fetch_posts ALTER COLUMN points TYPE numeric(5,2) USING points::numeric(5,2);

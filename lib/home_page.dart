@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:water_bottle/services/firebase_auth_service.dart';
 import 'package:water_bottle/services/supabase_data_service.dart';
 import 'package:water_bottle/services/notification_service.dart';
+import 'package:water_bottle/services/app_events.dart';
 
 enum VerificationStatus { pending, verified, rejected }
 
@@ -228,6 +229,14 @@ class _HomePageState extends State<HomePage> {
     } else {
       return '${_getMonthName(date.month)} ${date.day}';
     }
+  }
+
+  // Format time as HH:MM (24-hour) with leading zeros
+  String _formatTime(DateTime date) {
+    final twoDigits = (int n) => n.toString().padLeft(2, '0');
+    final hh = twoDigits(date.hour);
+    final mm = twoDigits(date.minute);
+    return '$hh:$mm';
   }
 
   String _getMonthName(int month) {
@@ -984,6 +993,17 @@ class _HomePageState extends State<HomePage> {
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                // Show post time in HH:MM format
+                Text(
+                  _formatTime(activity.date),
+                  style: TextStyle(
+                    // color: Colors.grey[500],
+                    color: const Color(0xFF42AAF0),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ],
             ),
@@ -2406,8 +2426,9 @@ class _HomePageState extends State<HomePage> {
       // Force a rebuild to ensure data is fresh
     });
 
-    // Broadcast data change event for other pages
-    _broadcastDataChange();
+    // Broadcast a lightweight app-level event so other pages (leaderboard)
+    // can reload their data when needed.
+    AppEvents.notifyDataChanged();
   }
 
   // Broadcast data change to other pages
